@@ -140,6 +140,7 @@ public:
         (const std::string &ifName, uint32_t vlanId, const std::string &ip, uint32_t mask), (override));
     MOCK_METHOD(int32_t, GetConnectOwnerUid, (const NetConnInfo &netConnInfo, int32_t &ownerUid), (override));
     MOCK_METHOD(int32_t, GetSystemNetPortStates, (NetPortStatesInfo &netPortStatesInfo), (override));
+    MOCK_METHOD(int32_t, IsDeadFlowResetTargetBundle, (const std::string &bundleName, bool &flag), (override));
 };
 
 } // namespace NetManagerStandard
