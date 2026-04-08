@@ -330,7 +330,7 @@ bool ParseAddress(napi_env env, napi_value address, struct INetAddr &iNetAddr)
     }
 
     uint32_t prefix = iNetAddr.prefixlen_;
-    if (prefix == 0 || prefix >= (isIpv6 ? IPV6_NET_PREFIX_MAX_LENGTH : NET_MASK_MAX_LENGTH)) {
+    if (prefix == 0 || prefix > (isIpv6 ? IPV6_NET_PREFIX_MAX_LENGTH : NET_MASK_MAX_LENGTH)) {
         NETMGR_EXT_LOG_E("prefixlen_ error");
         return false;
     }
