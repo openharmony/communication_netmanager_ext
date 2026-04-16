@@ -59,6 +59,7 @@ private:
     std::mutex callbackMutex_;
     std::mutex mutex_;
     std::shared_mutex postbackCallbackMutex_;
+    std::mutex msgIdMutex_;
 #ifdef NET_EXTENSIBLE_AUTHENTICATION
     std::shared_ptr<EapHdiWpaManager> eapHdiWpaManager_;
     std::vector<std::string> ethEapRegCmdVec_;
