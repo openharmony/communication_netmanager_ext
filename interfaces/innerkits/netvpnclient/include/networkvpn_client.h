@@ -337,6 +337,7 @@ private:
     std::shared_mutex clientVpnConfigmutex_;
     RecoverCallbackPara clientVpnConfig_;
     bool saStart_ = false;
+    bool isVpnSetUp_ = false;
 };
 } // namespace NetManagerStandard
 } // namespace OHOS
