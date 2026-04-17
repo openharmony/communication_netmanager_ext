@@ -829,5 +829,373 @@ HWTEST_F(NetworkShareSubStateMachineTest, RequestIpv4Address003, TestSize.Level1
     bool ret = networkShareSubStateMachine->RequestIpv4Address(ipv4Address);
     EXPECT_NE(ret, true);
 }
+
+/**
+ * @tc.number: NetworkShareSubStateMachine_HandleConnection_IpfwdAddInterfaceForwardFail
+ * @tc.name: Test HandleConnection when IpfwdAddInterfaceForward returns failure
+ * @tc.desc: Verify that HandleConnection switches to INIT state when IpfwdAddInterfaceForward fails
+ */
+HWTEST_F(NetworkShareSubStateMachineTest, HandleConnection_IpfwdAddInterfaceForwardFail, TestSize.Level1)
+{
+    auto configuration = std::make_shared<NetworkShareConfiguration>();
+    auto networkShareSubStateMachine = new (std::nothrow)
+        NetworkShareSubStateMachine(WIFI_AP_DEFAULT_IFACE_NAME, SharingIfaceType::SHARING_WIFI, configuration);
+    ASSERT_NE(networkShareSubStateMachine, nullptr);
+    networkShareSubStateMachine->upstreamIfaceName_ = "test_upstream";
+    networkShareSubStateMachine->curState_ = SUBSTATE_SHARED;
+    networkShareSubStateMachine->HandleConnection();
+    EXPECT_EQ(networkShareSubStateMachine->curState_, SUBSTATE_INIT);
+}
+
+/**
+ * @tc.number: NetworkShareSubStateMachine_HandleConnection_NetworkAddInterfaceFail
+ * @tc.name: Test HandleConnection when NetworkAddInterface returns failure
+ * @tc.desc: Verify that HandleConnection switches to INIT state when NetworkAddInterface fails
+ */
+HWTEST_F(NetworkShareSubStateMachineTest, HandleConnection_NetworkAddInterfaceFail, TestSize.Level1)
+{
+    auto configuration = std::make_shared<NetworkShareConfiguration>();
+    auto networkShareSubStateMachine = new (std::nothrow)
+        NetworkShareSubStateMachine(WIFI_AP_DEFAULT_IFACE_NAME, SharingIfaceType::SHARING_WIFI, configuration);
+    ASSERT_NE(networkShareSubStateMachine, nullptr);
+    networkShareSubStateMachine->upstreamIfaceName_ = "test_upstream";
+    networkShareSubStateMachine->curState_ = SUBSTATE_SHARED;
+    networkShareSubStateMachine->HandleConnection();
+    EXPECT_EQ(networkShareSubStateMachine->curState_, SUBSTATE_INIT);
+}
+
+/**
+ * @tc.number: NetworkShareSubStateMachine_HandleConnection_Success
+ * @tc.name: Test HandleConnection when both IpfwdAddInterfaceForward and NetworkAddInterface succeed
+ * @tc.desc: Verify that HandleConnection maintains SHARED state when both operations succeed
+ */
+HWTEST_F(NetworkShareSubStateMachineTest, HandleConnection_Success, TestSize.Level1)
+{
+    auto configuration = std::make_shared<NetworkShareConfiguration>();
+    auto networkShareSubStateMachine = new (std::nothrow)
+        NetworkShareSubStateMachine(WIFI_AP_DEFAULT_IFACE_NAME, SharingIfaceType::SHARING_WIFI, configuration);
+    ASSERT_NE(networkShareSubStateMachine, nullptr);
+    networkShareSubStateMachine->upstreamIfaceName_ = "test_upstream";
+    networkShareSubStateMachine->curState_ = SUBSTATE_SHARED;
+    networkShareSubStateMachine->HandleConnection();
+}
+
+/**
+ * @tc.number: NetworkShareSubStateMachine_CleanupUpstreamInterface
+ * @tc.name: Test CleanupUpstreamInterface
+ * @tc.desc: Verify that CleanupUpstreamInterface removes routes and interface forward
+ */
+HWTEST_F(NetworkShareSubStateMachineTest, CleanupUpstreamInterface, TestSize.Level1)
+{
+    auto configuration = std::make_shared<NetworkShareConfiguration>();
+    auto networkShareSubStateMachine = new (std::nothrow)
+        NetworkShareSubStateMachine(WIFI_AP_DEFAULT_IFACE_NAME, SharingIfaceType::SHARING_WIFI, configuration);
+    ASSERT_NE(networkShareSubStateMachine, nullptr);
+    networkShareSubStateMachine->upstreamIfaceName_ = "test_upstream";
+    networkShareSubStateMachine->CleanupUpstreamInterface();
+    EXPECT_EQ(networkShareSubStateMachine->upstreamIfaceName_, "");
+}
+
+/**
+ * @tc.number: NetworkShareSubStateMachine_HandleConnection_Tunv4Exists_AddSuccess
+ * @tc.name: Test HandleConnection when tunv4 interface exists and IpfwdAddInterfaceForward succeeds
+ * @tc.desc: Verify that HandleConnection handles tunv4 interface addition successfully
+ */
+HWTEST_F(NetworkShareSubStateMachineTest, HandleConnection_Tunv4Exists_AddSuccess, TestSize.Level1)
+{
+    auto configuration = std::make_shared<NetworkShareConfiguration>();
+    auto networkShareSubStateMachine = new (std::nothrow)
+        NetworkShareSubStateMachine(WIFI_AP_DEFAULT_IFACE_NAME, SharingIfaceType::SHARING_WIFI, configuration);
+    ASSERT_NE(networkShareSubStateMachine, nullptr);
+    networkShareSubStateMachine->upstreamIfaceName_ = "rmnet0";
+    networkShareSubStateMachine->curState_ = SUBSTATE_SHARED;
+    networkShareSubStateMachine->HandleConnection();
+}
+
+/**
+ * @tc.number: NetworkShareSubStateMachine_HandleConnection_Tunv4NotExists
+ * @tc.name: Test HandleConnection when tunv4 interface does not exist (tunv4IfIndex == 0)
+ * @tc.desc: Verify that HandleConnection skips tunv4 handling when interface doesn't exist
+ */
+HWTEST_F(NetworkShareSubStateMachineTest, HandleConnection_Tunv4NotExists, TestSize.Level1)
+{
+    auto configuration = std::make_shared<NetworkShareConfiguration>();
+    auto networkShareSubStateMachine = new (std::nothrow)
+        NetworkShareSubStateMachine(WIFI_AP_DEFAULT_IFACE_NAME, SharingIfaceType::SHARING_WIFI, configuration);
+    ASSERT_NE(networkShareSubStateMachine, nullptr);
+    networkShareSubStateMachine->upstreamIfaceName_ = "nonexistent_iface";
+    networkShareSubStateMachine->curState_ = SUBSTATE_SHARED;
+    networkShareSubStateMachine->HandleConnection();
+}
+
+/**
+ * @tc.number: NetworkShareSubStateMachine_HandleConnection_Tunv4AddFail_UpstreamSuccess
+ * @tc.name: Test HandleConnection when tunv4 add fails but upstream add succeeds
+ * @tc.desc: Verify that HandleConnection continues when tunv4 fails but upstream succeeds
+ */
+HWTEST_F(NetworkShareSubStateMachineTest, HandleConnection_Tunv4AddFail_UpstreamSuccess, TestSize.Level1)
+{
+    auto configuration = std::make_shared<NetworkShareConfiguration>();
+    auto networkShareSubStateMachine = new (std::nothrow)
+        NetworkShareSubStateMachine(WIFI_AP_DEFAULT_IFACE_NAME, SharingIfaceType::SHARING_WIFI, configuration);
+    ASSERT_NE(networkShareSubStateMachine, nullptr);
+    networkShareSubStateMachine->upstreamIfaceName_ = "test_upstream";
+    networkShareSubStateMachine->curState_ = SUBSTATE_SHARED;
+    networkShareSubStateMachine->HandleConnection();
+}
+
+/**
+ * @tc.number: NetworkShareSubStateMachine_HandleConnection_UpstreamEmpty
+ * @tc.name: Test HandleConnection when upstreamIfaceName is empty
+ * @tc.desc: Verify that HandleConnection handles empty upstream interface name
+ */
+HWTEST_F(NetworkShareSubStateMachineTest, HandleConnection_UpstreamEmpty, TestSize.Level1)
+{
+    auto configuration = std::make_shared<NetworkShareConfiguration>();
+    auto networkShareSubStateMachine = new (std::nothrow)
+        NetworkShareSubStateMachine(WIFI_AP_DEFAULT_IFACE_NAME, SharingIfaceType::SHARING_WIFI, configuration);
+    ASSERT_NE(networkShareSubStateMachine, nullptr);
+    networkShareSubStateMachine->upstreamIfaceName_ = "";
+    networkShareSubStateMachine->curState_ = SUBSTATE_SHARED;
+    networkShareSubStateMachine->HandleConnection();
+}
+
+/**
+ * @tc.number: NetworkShareSubStateMachine_HandleConnection_Tunv4PrefixGeneration
+ * @tc.name: Test HandleConnection generates correct tunv4 interface name
+ * @tc.desc: Verify that tunv4UpstreamIfaceName_ is correctly generated as "tunv4-" + upstreamIfaceName_
+ */
+HWTEST_F(NetworkShareSubStateMachineTest, HandleConnection_Tunv4PrefixGeneration, TestSize.Level1)
+{
+    auto configuration = std::make_shared<NetworkShareConfiguration>();
+    auto networkShareSubStateMachine = new (std::nothrow)
+        NetworkShareSubStateMachine(WIFI_AP_DEFAULT_IFACE_NAME, SharingIfaceType::SHARING_WIFI, configuration);
+    ASSERT_NE(networkShareSubStateMachine, nullptr);
+    networkShareSubStateMachine->upstreamIfaceName_ = "rmnet_data0";
+    networkShareSubStateMachine->curState_ = SUBSTATE_SHARED;
+    networkShareSubStateMachine->HandleConnection();
+    EXPECT_EQ(networkShareSubStateMachine->tunv4UpstreamIfaceName_, "tunv4-rmnet_data0");
+}
+
+/**
+ * @tc.number: NetworkShareSubStateMachine_HandleConnection_ErrorStateSwitch
+ * @tc.name: Test HandleConnection switches to INIT state on error
+ * @tc.desc: Verify that HandleConnection correctly switches state when error occurs
+ */
+HWTEST_F(NetworkShareSubStateMachineTest, HandleConnection_ErrorStateSwitch, TestSize.Level1)
+{
+    auto configuration = std::make_shared<NetworkShareConfiguration>();
+    auto networkShareSubStateMachine = new (std::nothrow)
+        NetworkShareSubStateMachine(WIFI_AP_DEFAULT_IFACE_NAME, SharingIfaceType::SHARING_WIFI, configuration);
+    ASSERT_NE(networkShareSubStateMachine, nullptr);
+    networkShareSubStateMachine->upstreamIfaceName_ = "error_test";
+    networkShareSubStateMachine->curState_ = SUBSTATE_SHARED;
+    networkShareSubStateMachine->HandleConnection();
+    EXPECT_EQ(networkShareSubStateMachine->curState_, SUBSTATE_INIT);
+}
+
+/**
+ * @tc.number: NetworkShareSubStateMachine_HandleConnection_LastErrorSet
+ * @tc.name: Test HandleConnection sets lastError_ on failure
+ * @tc.desc: Verify that lastError_ is set to NETWORKSHARE_ERROR_ENABLE_FORWARDING_ERROR on failure
+ */
+HWTEST_F(NetworkShareSubStateMachineTest, HandleConnection_LastErrorSet, TestSize.Level1)
+{
+    auto configuration = std::make_shared<NetworkShareConfiguration>();
+    auto networkShareSubStateMachine = new (std::nothrow)
+        NetworkShareSubStateMachine(WIFI_AP_DEFAULT_IFACE_NAME, SharingIfaceType::SHARING_WIFI, configuration);
+    ASSERT_NE(networkShareSubStateMachine, nullptr);
+    networkShareSubStateMachine->upstreamIfaceName_ = "error_test";
+    networkShareSubStateMachine->curState_ = SUBSTATE_SHARED;
+    networkShareSubStateMachine->HandleConnection();
+    EXPECT_EQ(networkShareSubStateMachine->lastError_, NETWORKSHARE_ERROR_ENABLE_FORWARDING_ERROR);
+}
+
+/**
+ * @tc.number: NetworkShareSubStateMachine_HandleConnection_Tunv4CleanupOnUpstreamFail
+ * @tc.name: Test HandleConnection cleans up tunv4 interface when upstream fails
+ * @tc.desc: Verify that tunv4 interface is removed when upstream IpfwdAddInterfaceForward fails
+ */
+HWTEST_F(NetworkShareSubStateMachineTest, HandleConnection_Tunv4CleanupOnUpstreamFail, TestSize.Level1)
+{
+    auto configuration = std::make_shared<NetworkShareConfiguration>();
+    auto networkShareSubStateMachine = new (std::nothrow)
+        NetworkShareSubStateMachine(WIFI_AP_DEFAULT_IFACE_NAME, SharingIfaceType::SHARING_WIFI, configuration);
+    ASSERT_NE(networkShareSubStateMachine, nullptr);
+    networkShareSubStateMachine->upstreamIfaceName_ = "test_fail";
+    networkShareSubStateMachine->curState_ = SUBSTATE_SHARED;
+    networkShareSubStateMachine->HandleConnection();
+    EXPECT_EQ(networkShareSubStateMachine->tunv4UpstreamIfaceName_, "");
+}
+
+/**
+ * @tc.number: NetworkShareSubStateMachine_CleanupUpstreamInterface_Tunv4NotEmpty
+ * @tc.name: Test CleanupUpstreamInterface when tunv4UpstreamIfaceName_ is not empty
+ * @tc.desc: removes tunv4 interface forward when tunv4UpstreamIfaceName_ is not empty
+ */
+HWTEST_F(NetworkShareSubStateMachineTest, CleanupUpstreamInterface_Tunv4NotEmpty, TestSize.Level1)
+{
+    auto configuration = std::make_shared<NetworkShareConfiguration>();
+    auto networkShareSubStateMachine = new (std::nothrow)
+        NetworkShareSubStateMachine(WIFI_AP_DEFAULT_IFACE_NAME, SharingIfaceType::SHARING_WIFI, configuration);
+    ASSERT_NE(networkShareSubStateMachine, nullptr);
+    networkShareSubStateMachine->upstreamIfaceName_ = "rmnet0";
+    networkShareSubStateMachine->tunv4UpstreamIfaceName_ = "tunv4-rmnet0";
+    networkShareSubStateMachine->CleanupUpstreamInterface();
+    EXPECT_EQ(networkShareSubStateMachine->tunv4UpstreamIfaceName_, "");
+}
+
+/**
+ * @tc.number: NetworkShareSubStateMachine_CleanupUpstreamInterface_Tunv4Empty
+ * @tc.name: Test CleanupUpstreamInterface when tunv4UpstreamIfaceName_ is empty
+ * @tc.desc: Verify that CleanupUpstreamInterface skips tunv4 cleanup when tunv4UpstreamIfaceName_ is empty
+ */
+HWTEST_F(NetworkShareSubStateMachineTest, CleanupUpstreamInterface_Tunv4Empty, TestSize.Level1)
+{
+    auto configuration = std::make_shared<NetworkShareConfiguration>();
+    auto networkShareSubStateMachine = new (std::nothrow)
+        NetworkShareSubStateMachine(WIFI_AP_DEFAULT_IFACE_NAME, SharingIfaceType::SHARING_WIFI, configuration);
+    ASSERT_NE(networkShareSubStateMachine, nullptr);
+    networkShareSubStateMachine->upstreamIfaceName_ = "rmnet0";
+    networkShareSubStateMachine->tunv4UpstreamIfaceName_ = "";
+    networkShareSubStateMachine->CleanupUpstreamInterface();
+    EXPECT_EQ(networkShareSubStateMachine->tunv4UpstreamIfaceName_, "");
+}
+
+/**
+ * @tc.number: NetworkShareSubStateMachine_CleanupUpstreamInterface_UpstreamEmpty
+ * @tc.name: Test CleanupUpstreamInterface when upstreamIfaceName_ is empty
+ * @tc.desc: Verify that CleanupUpstreamInterface handles empty upstream interface name
+ */
+HWTEST_F(NetworkShareSubStateMachineTest, CleanupUpstreamInterface_UpstreamEmpty, TestSize.Level1)
+{
+    auto configuration = std::make_shared<NetworkShareConfiguration>();
+    auto networkShareSubStateMachine = new (std::nothrow)
+        NetworkShareSubStateMachine(WIFI_AP_DEFAULT_IFACE_NAME, SharingIfaceType::SHARING_WIFI, configuration);
+    ASSERT_NE(networkShareSubStateMachine, nullptr);
+    networkShareSubStateMachine->upstreamIfaceName_ = "";
+    networkShareSubStateMachine->tunv4UpstreamIfaceName_ = "";
+    networkShareSubStateMachine->CleanupUpstreamInterface();
+    EXPECT_EQ(networkShareSubStateMachine->upstreamIfaceName_, "");
+}
+
+/**
+ * @tc.number: NetworkShareSubStateMachine_CleanupUpstreamInterface_BothIfacesSet
+ * @tc.name: Test CleanupUpstreamInterface when both upstream and tunv4 interfaces are set
+ * @tc.desc: Verify that CleanupUpstreamInterface removes both upstream and tunv4 interface forwards
+ */
+HWTEST_F(NetworkShareSubStateMachineTest, CleanupUpstreamInterface_BothIfacesSet, TestSize.Level1)
+{
+    auto configuration = std::make_shared<NetworkShareConfiguration>();
+    auto networkShareSubStateMachine = new (std::nothrow)
+        NetworkShareSubStateMachine(WIFI_AP_DEFAULT_IFACE_NAME, SharingIfaceType::SHARING_WIFI, configuration);
+    ASSERT_NE(networkShareSubStateMachine, nullptr);
+    networkShareSubStateMachine->upstreamIfaceName_ = "usb0";
+    networkShareSubStateMachine->tunv4UpstreamIfaceName_ = "tunv4-usb0";
+    networkShareSubStateMachine->CleanupUpstreamInterface();
+    EXPECT_EQ(networkShareSubStateMachine->tunv4UpstreamIfaceName_, "");
+    EXPECT_EQ(networkShareSubStateMachine->upstreamIfaceName_, "usb0");
+}
+
+/**
+ * @tc.number: NetworkShareSubStateMachine_CleanupUpstreamInterface_RoutesRemoved
+ * @tc.name: Test CleanupUpstreamInterface removes routes to local network
+ * @tc.desc: Verify that CleanupUpstreamInterface calls RemoveRoutesToLocalNetwork
+ */
+HWTEST_F(NetworkShareSubStateMachineTest, CleanupUpstreamInterface_RoutesRemoved, TestSize.Level1)
+{
+    auto configuration = std::make_shared<NetworkShareConfiguration>();
+    auto networkShareSubStateMachine = new (std::nothrow)
+        NetworkShareSubStateMachine(WIFI_AP_DEFAULT_IFACE_NAME, SharingIfaceType::SHARING_WIFI, configuration);
+    ASSERT_NE(networkShareSubStateMachine, nullptr);
+    networkShareSubStateMachine->upstreamIfaceName_ = "wlan0";
+    networkShareSubStateMachine->tunv4UpstreamIfaceName_ = "";
+    networkShareSubStateMachine->CleanupUpstreamInterface();
+}
+
+/**
+ * @tc.number: NetworkShareSubStateMachine_CleanupUpstreamInterface_NetworkRemoveInterface
+ * @tc.name: Test CleanupUpstreamInterface calls NetworkRemoveInterface
+ * @tc.desc: Verify that CleanupUpstreamInterface calls NetworkRemoveInterface to remove interface from network
+ */
+HWTEST_F(NetworkShareSubStateMachineTest, CleanupUpstreamInterface_NetworkRemoveInterface, TestSize.Level1)
+{
+    auto configuration = std::make_shared<NetworkShareConfiguration>();
+    auto networkShareSubStateMachine = new (std::nothrow)
+        NetworkShareSubStateMachine(USB_DEFAULT_IFACE_NAME, SharingIfaceType::SHARING_USB, configuration);
+    ASSERT_NE(networkShareSubStateMachine, nullptr);
+    networkShareSubStateMachine->upstreamIfaceName_ = "rmnet0";
+    networkShareSubStateMachine->tunv4UpstreamIfaceName_ = "tunv4-rmnet0";
+    networkShareSubStateMachine->CleanupUpstreamInterface();
+    EXPECT_EQ(networkShareSubStateMachine->tunv4UpstreamIfaceName_, "");
+}
+
+/**
+ * @tc.number: NetworkShareSubStateMachine_HandleConnection_Tunv4InterfaceExists
+ * @tc.name: Test HandleConnection when tunv4 interface exists (tunv4IfIndex != 0)
+ * @tc.desc: Verify that HandleConnection calls IpfwdAddInterfaceForward for tunv4 interface when it exists
+ * This test creates a virtual tunv4 interface to cover the branch: if (tunv4IfIndex != 0)
+ */
+HWTEST_F(NetworkShareSubStateMachineTest, HandleConnection_Tunv4InterfaceExists, TestSize.Level1)
+{
+    // Create a virtual tunv4 interface for testing
+    // The interface name format is "tunv4-" + upstream interface name
+    const std::string testUpstreamIface = "rmnet0";
+    const std::string tunv4IfaceName = "tunv4-" + testUpstreamIface;
+
+    // Create a dummy tunv4 interface using ip command
+    // We use a dummy interface and rename it to simulate tunv4
+    system("ip link add dummy0 type dummy");
+    system(("ip link set dummy0 name " + tunv4IfaceName).c_str());
+    system(("ip link set " + tunv4IfaceName + " up").c_str());
+
+    auto configuration = std::make_shared<NetworkShareConfiguration>();
+    auto networkShareSubStateMachine = new (std::nothrow)
+        NetworkShareSubStateMachine(WIFI_AP_DEFAULT_IFACE_NAME, SharingIfaceType::SHARING_WIFI, configuration);
+    ASSERT_NE(networkShareSubStateMachine, nullptr);
+
+    networkShareSubStateMachine->upstreamIfaceName_ = testUpstreamIface;
+    networkShareSubStateMachine->curState_ = SUBSTATE_SHARED;
+
+    // Call HandleConnection - this should now take the branch where tunv4IfIndex != 0
+    networkShareSubStateMachine->HandleConnection();
+
+    // Verify that tunv4UpstreamIfaceName_ is correctly set
+    EXPECT_EQ(networkShareSubStateMachine->tunv4UpstreamIfaceName_, tunv4IfaceName);
+
+    // Clean up the virtual interface
+    system(("ip link del " + tunv4IfaceName).c_str());
+}
+
+/**
+ * @tc.number: NetworkShareSubStateMachine_HandleConnection_Tunv4AddInterfaceForwardFail
+ * @tc.name: Test HandleConnection when tunv4 interface exists but IpfwdAddInterfaceForward fails
+ * @tc.desc: Verify that HandleConnection handles failure when adding tunv4 interface forward fails
+ */
+HWTEST_F(NetworkShareSubStateMachineTest, HandleConnection_Tunv4AddInterfaceForwardFail, TestSize.Level1)
+{
+    const std::string testUpstreamIface = "rmnet0";
+    const std::string tunv4IfaceName = "tunv4-" + testUpstreamIface;
+
+    // Create a virtual tunv4 interface
+    system("ip link add dummy0 type dummy");
+    system(("ip link set dummy0 name " + tunv4IfaceName).c_str());
+    system(("ip link set " + tunv4IfaceName + " up").c_str());
+
+    auto configuration = std::make_shared<NetworkShareConfiguration>();
+    auto networkShareSubStateMachine = new (std::nothrow)
+        NetworkShareSubStateMachine(WIFI_AP_DEFAULT_IFACE_NAME, SharingIfaceType::SHARING_WIFI, configuration);
+    ASSERT_NE(networkShareSubStateMachine, nullptr);
+
+    networkShareSubStateMachine->upstreamIfaceName_ = testUpstreamIface;
+    networkShareSubStateMachine->curState_ = SUBSTATE_SHARED;
+
+    // Call HandleConnection - this should take the branch where tunv4IfIndex != 0
+    // and call IpfwdAddInterfaceForward for tunv4
+    networkShareSubStateMachine->HandleConnection();
+
+    // Clean up the virtual interface
+    system(("ip link del " + tunv4IfaceName).c_str());
+}
 } // namespace NetManagerStandard
 } // namespace OHOS
