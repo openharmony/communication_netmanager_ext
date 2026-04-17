@@ -131,7 +131,9 @@ int32_t NetEapHandler::NotifyWpaEapInterceptInfo(const NetType netType, const sp
     }
     auto postbackCb = GetPostbackCallback();
     if (postbackCb) {
+        std::unique_lock<std::mutex> lock(msgIdMutex_);
         nTMapMsgId_[netType] = eapData->msgId;
+        lock.unlock();
         postbackCb->OnEapSupplicantPostback(netType, eapData);
     }
 #endif
@@ -141,6 +143,7 @@ int32_t NetEapHandler::NotifyWpaEapInterceptInfo(const NetType netType, const sp
 int32_t NetEapHandler::ReplyCustomEapData(int result, const sptr<EapData> &eapData)
 {
 #ifdef NET_EXTENSIBLE_AUTHENTICATION
+    std::unique_lock<std::mutex> msgIdLock(msgIdMutex_);
     auto iter = std::find_if(nTMapMsgId_.begin(), nTMapMsgId_.end(),
         [eapData](const std::pair<NetType, int>& p) { return p.second == eapData->msgId; });
     if (iter == nTMapMsgId_.end()) {
@@ -148,15 +151,17 @@ int32_t NetEapHandler::ReplyCustomEapData(int result, const sptr<EapData> &eapDa
             nTMapMsgId_.count(NetType::WLAN0), nTMapMsgId_.count(NetType::ETH0));
         return EAP_ERRCODE_INTERNAL_ERROR;
     }
+    auto netType = iter->first;
+    msgIdLock.unlock();
     /* ETH0 do not need check regEapCallBack_ */
-    if (iter->first == NetType::ETH0) {
+    if (netType == NetType::ETH0) {
         if (eapHdiWpaManager_ == nullptr) {
             return NETMANAGER_EXT_ERR_PARAMETER_ERROR;
         }
         return eapHdiWpaManager_->ReplyCustomEapData(ethEapIfName_, result, eapData);
     }
-    std::unique_lock<std::mutex> lock(mutex_);
-    auto &callback = regEapCallBack_[iter->first];
+    std::unique_lock<std::mutex> callbackLock(mutex_);
+    auto &callback = regEapCallBack_[netType];
     if (callback == nullptr) {
         NETMGR_EXT_LOG_E("%{public}s, callback is nullptr", __func__);
         return EAP_ERRCODE_INTERNAL_ERROR;
