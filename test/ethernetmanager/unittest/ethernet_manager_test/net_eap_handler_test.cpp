@@ -175,7 +175,7 @@ HWTEST_F(NetEapHandlerTest, NotifyWpaEapInterceptInfoTest001, TestSize.Level1)
     sptr<EapData> eapData =new (std::nothrow) EapData();
     eapData->eapCode = 1;
     eapData->eapType = 13;
-    eapData->msgId = 55;
+    eapData->msgId = 56;
     eapData->bufferLen = 4;
     std::vector<uint8_t> tmp = {0x11, 0x12};
     eapData->eapBuffer = tmp;
