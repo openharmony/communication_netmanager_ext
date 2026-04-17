@@ -220,10 +220,12 @@ public:
      */
     void OnPowerDisConnected();
 
-    /**
-     * notify power connect
-     */
     void OnPowerConnected();
+
+    /**
+     * get interface index by name
+     */
+    uint32_t GetInterfaceIndexByName(const std::string &ifName);
 
 #ifdef WIFI_MODOULE
     void RegisterWifiApCallback();
@@ -280,6 +282,10 @@ private:
     bool CheckValidShareInterface(const std::string &iface);
     void RecoverSharingType();
     bool CheckIfUpUsbIface(const std::string &iface);
+    bool IsClatInterface(const std::string &iface);
+    std::string GetV6IfaceFromClat(const std::string &clatIface);
+    void HandleClatInterfaceAdded(const std::string &clatIface);
+    void HandleClatInterfaceRemoved(const std::string &clatIface);
 
 private:
     ffrt::mutex mutex_;

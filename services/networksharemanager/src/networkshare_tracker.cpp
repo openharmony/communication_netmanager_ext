@@ -47,6 +47,7 @@ namespace OHOS {
 namespace NetManagerStandard {
 namespace {
 constexpr const char *BLUETOOTH_DEFAULT_IFACE_NAME = "bt-pan";
+constexpr const char *CLAT_PREFIX = "tunv4-";
 #ifdef WIFI_MODOULE
 constexpr const char *WIFI_AP_DEFAULT_IFACE_NAME = "wlan0";
 constexpr const char *ERROR_MSG_ENABLE_WIFI = "Enable Wifi Iface failed";
@@ -1132,6 +1133,20 @@ void NetworkShareTracker::InterfaceStatusChanged(const std::string &iface, bool 
         NETMGR_EXT_LOG_E("eventHandler is null.");
         return;
     }
+    NETMGR_EXT_LOG_I("interface[%{public}s] for [%{public}s]", iface.c_str(), up ? "up" : "down");
+
+    // Handle clat interface status changed
+    if (IsClatInterface(iface)) {
+        NETMGR_EXT_LOG_I("clat interface[%{public}s] status changed, handle clat event", iface.c_str());
+        std::string taskName = up ? "ClatInterfaceAdded_task" : "ClatInterfaceRemoved_task";
+        std::function<void()> clatFunc =
+            up ? std::function<void()>([this, iface]() { HandleClatInterfaceAdded(iface); })
+               : std::function<void()>([this, iface]() { HandleClatInterfaceRemoved(iface); });
+        networkShareTrackerFfrtQueue_->submit(clatFunc, ffrt::task_attr().name(taskName.c_str()));
+        return;
+    }
+
+    // Handle downstream interface status changed
     SharingIfaceType type;
     if (!InterfaceNameToType(iface, type) || !IsHandleNetlinkEvent(type, up)) {
         NETMGR_EXT_LOG_D("iface[%{public}s] is not downsteam or not correct event.", iface.c_str());
@@ -1213,6 +1228,7 @@ void NetworkShareTracker::InterfaceRemoved(const std::string &iface)
         NETMGR_EXT_LOG_E("eventHandler is null.");
         return;
     }
+
     SharingIfaceType type;
     if (!InterfaceNameToType(iface, type) || !IsHandleNetlinkEvent(type, false)) {
         NETMGR_EXT_LOG_D("iface[%{public}s] is not downsteam or not correct event.", iface.c_str());
@@ -1328,6 +1344,110 @@ bool NetworkShareTracker::CheckValidShareInterface(const std::string &iface)
     return ret;
 }
 
+bool NetworkShareTracker::IsClatInterface(const std::string &iface)
+{
+    if (iface.find(CLAT_PREFIX) == 0) {
+        NETMGR_EXT_LOG_I("iface[%{public}s] is clat interface", iface.c_str());
+        return true;
+    }
+    return false;
+}
+
+std::string NetworkShareTracker::GetV6IfaceFromClat(const std::string &clatIface)
+{
+    if (clatIface.find(CLAT_PREFIX) == 0) {
+        return clatIface.substr(strlen(CLAT_PREFIX));
+    }
+    return "";
+}
+
+void NetworkShareTracker::HandleClatInterfaceAdded(const std::string &clatIface)
+{
+    NETMGR_EXT_LOG_I("HandleClatInterfaceAdded clatIface[%{public}s]", clatIface.c_str());
+    std::string cellularIface = GetV6IfaceFromClat(clatIface);
+    if (cellularIface.empty()) {
+        NETMGR_EXT_LOG_E("GetCellularIfaceFromClat failed for iface[%{public}s]", clatIface.c_str());
+        return;
+    }
+
+    for (auto &subSM : sharedSubSM_) {
+        if (subSM == nullptr) {
+            continue;
+        }
+        std::string upIface;
+        subSM->GetUpIfaceName(upIface);
+        if (upIface != cellularIface) {
+            continue;
+        }
+        std::string downIface;
+        subSM->GetDownIfaceName(downIface);
+        NETMGR_EXT_LOG_I("added for subSM[%{public}s], downIface[%{public}s], upIface[%{public}s]",
+            subSM->GetInterfaceName().c_str(), downIface.c_str(), upIface.c_str());
+
+        // First do removal operations
+        NetsysController::GetInstance().DisableNat(downIface, clatIface);
+        NetsysController::GetInstance().IpfwdRemoveInterfaceForward(downIface, clatIface);
+
+        // Then do addition operations
+        int32_t ret = NetsysController::GetInstance().IpfwdAddInterfaceForward(downIface, clatIface);
+        if (ret != NETMANAGER_EXT_SUCCESS) {
+            NETMGR_EXT_LOG_E("HandleClatInterfaceAdded IpfwdAddInterfaceForward failed, ret[%{public}d]", ret);
+        }
+        ret = NetsysController::GetInstance().EnableNat(downIface, clatIface);
+        if (ret != NETMANAGER_EXT_SUCCESS) {
+            NETMGR_EXT_LOG_E("HandleClatInterfaceAdded EnableNat failed, ret[%{public}d]", ret);
+        }
+    }
+}
+
+void NetworkShareTracker::HandleClatInterfaceRemoved(const std::string &clatIface)
+{
+    NETMGR_EXT_LOG_I("HandleClatInterfaceRemoved clatIface[%{public}s]", clatIface.c_str());
+    std::string cellularIface = GetV6IfaceFromClat(clatIface);
+    if (cellularIface.empty()) {
+        NETMGR_EXT_LOG_E("GetCellularIfaceFromClat failed for iface[%{public}s]", clatIface.c_str());
+        return;
+    }
+
+    for (auto &subSM : sharedSubSM_) {
+        if (subSM == nullptr) {
+            continue;
+        }
+        std::string upIface;
+        subSM->GetUpIfaceName(upIface);
+        if (upIface != cellularIface) {
+            continue;
+        }
+        std::string downIface;
+        subSM->GetDownIfaceName(downIface);
+        NETMGR_EXT_LOG_I("removed for subSM[%{public}s], downIface[%{public}s], upIface[%{public}s]",
+            subSM->GetInterfaceName().c_str(), downIface.c_str(), upIface.c_str());
+
+        // Check if subSM is active (SHARED state)
+        std::lock_guard<ffrt::mutex> lock(mutex_);
+        auto iter = subStateMachineMap_.find(subSM->GetInterfaceName());
+        if (iter == subStateMachineMap_.end()) {
+            NETMGR_EXT_LOG_W("subSM[%{public}s] not found in subStateMachineMap_", subSM->GetInterfaceName().c_str());
+            continue;
+        }
+        auto state = iter->second;
+        if (state == nullptr || state->lastState_ != SUB_SM_STATE_SHARED) {
+            NETMGR_EXT_LOG_I("subSM[%{public}s] is not active, skip clat removal", subSM->GetInterfaceName().c_str());
+            continue;
+        }
+
+        // Call DisableNat and IpfwdRemoveInterfaceForward
+        int32_t ret = NetsysController::GetInstance().DisableNat(downIface, clatIface);
+        if (ret != NETMANAGER_EXT_SUCCESS) {
+            NETMGR_EXT_LOG_E("HandleClatInterfaceRemoved DisableNat failed, ret[%{public}d]", ret);
+        }
+        ret = NetsysController::GetInstance().IpfwdRemoveInterfaceForward(downIface, clatIface);
+        if (ret != NETMANAGER_EXT_SUCCESS) {
+            NETMGR_EXT_LOG_E("HandleClatInterfaceRemoved IpfwdRemoveInterfaceForward failed, ret[%{public}d]", ret);
+        }
+    }
+}
+
 // LCOV_EXCL_START
 void NetworkShareTracker::RestartResume()
 {
@@ -1378,6 +1498,11 @@ void NetworkShareTracker::OnPowerConnected()
     powerConnected_ = true;
     NetworkShareTracker::GetInstance().HandleIdleApStopTimer();
 #endif
+}
+
+uint32_t NetworkShareTracker::GetInterfaceIndexByName(const std::string &ifName)
+{
+    return if_nametoindex(ifName.c_str());
 }
 
 void NetworkShareTracker::OnPowerDisConnected()

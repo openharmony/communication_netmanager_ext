@@ -276,6 +276,16 @@ void NetworkShareMainStateMachine::ChooseUpstreamNetwork()
         std::make_shared<UpstreamNetworkInfo>(pNetHandle, pNetCapabilities, pNetLinkInfo);
     if (networkMonitor_ != nullptr && networkMonitor_->GetCurrentGoodUpstream(netInfoPtr)) {
         upstreamIfaceName_ = netInfoPtr->netLinkPro_->ifaceName_;
+        std::string tunv4UpstreamIfaceName = "tunv4-" + upstreamIfaceName_;
+        uint32_t tunv4IfIndex = NetworkShareTracker::GetInstance().GetInterfaceIndexByName(tunv4UpstreamIfaceName);
+        if (tunv4IfIndex != 0) {
+            int32_t result = NetsysController::GetInstance().EnableNat(FAKE_DOWNSTREAM_IFACENAME,
+                tunv4UpstreamIfaceName);
+            if (result != NETSYS_SUCCESS) {
+                NETMGR_EXT_LOG_E("Main StateMachine enable NAT tunv4 newIface[%{public}s] error[%{public}d].",
+                                 tunv4UpstreamIfaceName.c_str(), result);
+            }
+        }
         int32_t result = NetsysController::GetInstance().EnableNat(FAKE_DOWNSTREAM_IFACENAME, upstreamIfaceName_);
         if (result != NETSYS_SUCCESS) {
             NetworkShareHisysEvent::GetInstance().SendFaultEvent(
@@ -387,6 +397,8 @@ void NetworkShareMainStateMachine::DisableForward()
 {
     NetworkShareTracker::GetInstance().SetUpstreamNetHandle(nullptr);
     int32_t result = NetsysController::GetInstance().DisableNat(FAKE_DOWNSTREAM_IFACENAME, upstreamIfaceName_);
+    std::string tunv4UpstreamIfaceName = "tunv4-" + upstreamIfaceName_;
+    NetsysController::GetInstance().DisableNat(FAKE_DOWNSTREAM_IFACENAME, tunv4UpstreamIfaceName);
     if (result != NETSYS_SUCCESS) {
         NetworkShareHisysEvent::GetInstance().SendFaultEvent(
             NetworkShareEventOperator::OPERATION_CONFIG_FORWARD, NetworkShareEventErrorType::ERROR_CONFIG_FORWARD,
