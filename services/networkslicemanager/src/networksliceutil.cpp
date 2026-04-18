@@ -280,6 +280,5 @@ std::string Str16ToStr8(std::u16string str)
     std::string result = convert.to_bytes(str);
     return result == DEFAULT_STRING ? "" : result;
 }
-
 } // namespace NetManagerStandard
 } // namespace OHOS
