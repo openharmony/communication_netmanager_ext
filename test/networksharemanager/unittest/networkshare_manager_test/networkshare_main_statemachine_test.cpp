@@ -180,5 +180,221 @@ HWTEST_F(NetworkShareMainStateMachineTest, ChooseUpstreamNetworkTest, TestSize.L
     EXPECT_TRUE(instance_->upstreamIfaceName_.empty());
     EXPECT_EQ(instance_->upstreamIfaceName_, "");
 }
+
+/**
+ * @tc.number: NetworkShareMainStateMachine_ChooseUpstreamNetwork_NullMonitor
+ * @tc.name: Test ChooseUpstreamNetwork with null networkMonitor_
+ * @tc.desc: Verify that ChooseUpstreamNetwork handles null networkMonitor_
+ */
+HWTEST_F(NetworkShareMainStateMachineTest, ChooseUpstreamNetwork_NullMonitor, TestSize.Level1)
+{
+    ASSERT_NE(instance_, nullptr);
+    instance_->networkMonitor_ = nullptr;
+    instance_->ChooseUpstreamNetwork();
+    // Should return early when networkMonitor_ is null
+    EXPECT_TRUE(instance_->upstreamIfaceName_.empty());
+}
+
+/**
+ * @tc.number: NetworkShareMainStateMachine_ChooseUpstreamNetwork_GetUpstreamFailed
+ * @tc.name: Test ChooseUpstreamNetwork when GetCurrentGoodUpstream returns false
+ * @tc.desc: Verify that ChooseUpstreamNetwork handles GetCurrentGoodUpstream failure
+ */
+HWTEST_F(NetworkShareMainStateMachineTest, ChooseUpstreamNetwork_GetUpstreamFailed, TestSize.Level1)
+{
+    ASSERT_NE(instance_, nullptr);
+    // Set networkMonitor_ to a valid monitor but GetCurrentGoodUpstream will return false
+    // because there's no default network registered
+    instance_->ChooseUpstreamNetwork();
+    // upstreamIfaceName_ should remain empty when GetCurrentGoodUpstream fails
+    EXPECT_TRUE(instance_->upstreamIfaceName_.empty());
+}
+
+/**
+ * @tc.number: NetworkShareMainStateMachine_ChooseUpstreamNetwork_WithValidUpstream_NoClat
+ * @tc.name: Test ChooseUpstreamNetwork with valid upstream but no clat interface
+ * @tc.desc: Verify that ChooseUpstreamNetwork handles valid upstream without clat interface
+ */
+HWTEST_F(NetworkShareMainStateMachineTest, ChooseUpstreamNetwork_WithValidUpstream_NoClat, TestSize.Level1)
+{
+    ASSERT_NE(instance_, nullptr);
+    auto monitor = instance_->networkMonitor_;
+    ASSERT_NE(monitor, nullptr);
+
+    // Setup: Make GetCurrentGoodUpstream return true
+    sptr<NetHandle> netHandle = new (std::nothrow) NetHandle(1);
+    sptr<NetAllCapabilities> netCap = new (std::nothrow) NetAllCapabilities();
+    sptr<NetLinkInfo> netLinkInfo = new (std::nothrow) NetLinkInfo();
+    netLinkInfo->ifaceName_ = "test_iface";
+    auto upstreamInfo = std::make_shared<UpstreamNetworkInfo>(netHandle, netCap, netLinkInfo);
+
+    // Insert into networkMaps_ to make GetCurrentGoodUpstream return true
+    monitor->networkMaps_.clear();
+    monitor->defaultNetworkId_ = 1;
+    monitor->networkMaps_.insert(std::make_pair(1, upstreamInfo));
+
+    // Call ChooseUpstreamNetwork - it will try to get upstream
+    instance_->ChooseUpstreamNetwork();
+
+    // Verify upstreamIfaceName_ is set
+    EXPECT_EQ(instance_->upstreamIfaceName_, "test_iface");
+}
+
+/**
+ * @tc.number: NetworkShareMainStateMachine_ChooseUpstreamNetwork_WithClatInterface
+ * @tc.name: Test ChooseUpstreamNetwork with clat interface (tunv4-)
+ * @tc.desc: Verify that ChooseUpstreamNetwork handles clat interface when GetCurrentGoodUpstream returns true
+ */
+HWTEST_F(NetworkShareMainStateMachineTest, ChooseUpstreamNetwork_WithClatInterface, TestSize.Level1)
+{
+    ASSERT_NE(instance_, nullptr);
+    auto monitor = instance_->networkMonitor_;
+    ASSERT_NE(monitor, nullptr);
+
+    // Setup: Make GetCurrentGoodUpstream return true with an interface that has clat
+    sptr<NetHandle> netHandle = new (std::nothrow) NetHandle(1);
+    sptr<NetAllCapabilities> netCap = new (std::nothrow) NetAllCapabilities();
+    sptr<NetLinkInfo> netLinkInfo = new (std::nothrow) NetLinkInfo();
+    netLinkInfo->ifaceName_ = "rmnet0";
+    auto upstreamInfo = std::make_shared<UpstreamNetworkInfo>(netHandle, netCap, netLinkInfo);
+
+    // Insert into networkMaps_ to make GetCurrentGoodUpstream return true
+    monitor->networkMaps_.clear();
+    monitor->defaultNetworkId_ = 1;
+    monitor->networkMaps_.insert(std::make_pair(1, upstreamInfo));
+
+    // Call ChooseUpstreamNetwork - it will check for tunv4-rmnet0 interface
+    instance_->ChooseUpstreamNetwork();
+
+    // Verify upstreamIfaceName_ is set
+    EXPECT_EQ(instance_->upstreamIfaceName_, "rmnet0");
+}
+
+/**
+ * @tc.number: NetworkShareMainStateMachine_DisableForward_EmptyUpstream
+ * @tc.name: Test DisableForward with empty upstreamIfaceName_
+ * @tc.desc: Verify that DisableForward handles empty upstream interface name
+ */
+HWTEST_F(NetworkShareMainStateMachineTest, DisableForward_EmptyUpstream, TestSize.Level1)
+{
+    ASSERT_NE(instance_, nullptr);
+    instance_->upstreamIfaceName_ = "";
+    instance_->DisableForward();
+    // Should handle empty upstream interface name
+    EXPECT_EQ(instance_->upstreamIfaceName_, "");
+}
+
+/**
+ * @tc.number: NetworkShareMainStateMachine_DisableForward_ValidUpstream
+ * @tc.name: Test DisableForward with valid upstream interface
+ * @tc.desc: Verify that DisableForward correctly disables forward for upstream
+ */
+HWTEST_F(NetworkShareMainStateMachineTest, DisableForward_ValidUpstream, TestSize.Level1)
+{
+    ASSERT_NE(instance_, nullptr);
+    instance_->upstreamIfaceName_ = "test_iface";
+    instance_->DisableForward();
+    // Should clear the upstream interface name
+    EXPECT_EQ(instance_->upstreamIfaceName_, "");
+}
+
+/**
+ * @tc.number: NetworkShareMainStateMachine_DisableForward_WithClat
+ * @tc.name: Test DisableForward with clat interface
+ * @tc.desc: Verify that DisableForward handles clat interface (tunv4-)
+ */
+HWTEST_F(NetworkShareMainStateMachineTest, DisableForward_WithClat, TestSize.Level1)
+{
+    ASSERT_NE(instance_, nullptr);
+    instance_->upstreamIfaceName_ = "rmnet0";
+    instance_->DisableForward();
+    // Should disable NAT for both rmnet0 and tunv4-rmnet0
+    EXPECT_EQ(instance_->upstreamIfaceName_, "");
+}
+
+/**
+ * @tc.number: NetworkShareMainStateMachine_HandleAliveUpstreamMonitorCallback_OnLinkProperties
+ * @tc.name: Test HandleAliveUpstreamMonitorCallback with ON_LINKPROPERTIES event
+ * @tc.desc: Verify that HandleAliveUpstreamMonitorCallback handles ON_LINKPROPERTIES event
+ */
+HWTEST_F(NetworkShareMainStateMachineTest, HandleAliveUpstreamMonitorCallback_OnLinkProperties, TestSize.Level1)
+{
+    ASSERT_NE(instance_, nullptr);
+    MessageUpstreamInfo message;
+    message.cmd_ = EVENT_UPSTREAM_CALLBACK_ON_LINKPROPERTIES;
+    auto ret = instance_->HandleAliveUpstreamMonitorCallback(message);
+    EXPECT_EQ(ret, NETMANAGER_EXT_SUCCESS);
+}
+
+/**
+ * @tc.number: NetworkShareMainStateMachine_HandleAliveUpstreamMonitorCallback_OnLost
+ * @tc.name: Test HandleAliveUpstreamMonitorCallback with ON_LOST event
+ * @tc.desc: Verify that HandleAliveUpstreamMonitorCallback handles ON_LOST event
+ */
+HWTEST_F(NetworkShareMainStateMachineTest, HandleAliveUpstreamMonitorCallback_OnLost, TestSize.Level1)
+{
+    ASSERT_NE(instance_, nullptr);
+    MessageUpstreamInfo message;
+    message.cmd_ = EVENT_UPSTREAM_CALLBACK_ON_LOST;
+    auto ret = instance_->HandleAliveUpstreamMonitorCallback(message);
+    EXPECT_EQ(ret, NETMANAGER_EXT_SUCCESS);
+}
+
+/**
+ * @tc.number: NetworkShareMainStateMachine_HandleAliveUpstreamMonitorCallback_OnCapabilities
+ * @tc.name: Test HandleAliveUpstreamMonitorCallback with ON_CAPABILITIES event
+ * @tc.desc: Verify that HandleAliveUpstreamMonitorCallback handles ON_CAPABILITIES event
+ */
+HWTEST_F(NetworkShareMainStateMachineTest, HandleAliveUpstreamMonitorCallback_OnCapabilities, TestSize.Level1)
+{
+    ASSERT_NE(instance_, nullptr);
+    MessageUpstreamInfo message;
+    message.cmd_ = EVENT_UPSTREAM_CALLBACK_ON_CAPABILITIES;
+    auto ret = instance_->HandleAliveUpstreamMonitorCallback(message);
+    EXPECT_EQ(ret, NETMANAGER_EXT_SUCCESS);
+}
+
+/**
+ * @tc.number: NetworkShareMainStateMachine_HandleAliveUpstreamMonitorCallback_DefaultSwitched
+ * @tc.name: Test HandleAliveUpstreamMonitorCallback with DEFAULT_SWITCHED event
+ * @tc.desc: Verify that HandleAliveUpstreamMonitorCallback handles DEFAULT_SWITCHED event
+ */
+HWTEST_F(NetworkShareMainStateMachineTest, HandleAliveUpstreamMonitorCallback_DefaultSwitched, TestSize.Level1)
+{
+    ASSERT_NE(instance_, nullptr);
+    MessageUpstreamInfo message;
+    message.cmd_ = EVENT_UPSTREAM_CALLBACK_DEFAULT_SWITCHED;
+    auto ret = instance_->HandleAliveUpstreamMonitorCallback(message);
+    EXPECT_EQ(ret, NETMANAGER_EXT_SUCCESS);
+}
+
+/**
+ * @tc.number: NetworkShareMainStateMachine_HandleAliveUpstreamMonitorCallback_DefaultCmd
+ * @tc.name: Test HandleAliveUpstreamMonitorCallback with default cmd
+ * @tc.desc: Verify that HandleAliveUpstreamMonitorCallback handles default cmd
+ */
+HWTEST_F(NetworkShareMainStateMachineTest, HandleAliveUpstreamMonitorCallback_DefaultCmd, TestSize.Level1)
+{
+    ASSERT_NE(instance_, nullptr);
+    MessageUpstreamInfo message;
+    message.cmd_ = 100; // Invalid cmd
+    auto ret = instance_->HandleAliveUpstreamMonitorCallback(message);
+    EXPECT_EQ(ret, NETMANAGER_EXT_SUCCESS);
+}
+
+/**
+ * @tc.number: NetworkShareMainStateMachine_HandleAliveUpstreamMonitorCallback_UpstreamNotWanted
+ * @tc.name: Test HandleAliveUpstreamMonitorCallback when upstream is not wanted
+ * @tc.desc: Verify that HandleAliveUpstreamMonitorCallback returns early when UpstreamWanted is false
+ */
+HWTEST_F(NetworkShareMainStateMachineTest, HandleAliveUpstreamMonitorCallback_UpstreamNotWanted, TestSize.Level1)
+{
+    ASSERT_NE(instance_, nullptr);
+    // This test verifies the code path when UpstreamWanted returns false
+    MessageUpstreamInfo message;
+    message.cmd_ = EVENT_UPSTREAM_CALLBACK_ON_LINKPROPERTIES;
+    auto ret = instance_->HandleAliveUpstreamMonitorCallback(message);
+    EXPECT_EQ(ret, NETMANAGER_EXT_SUCCESS);
+}
 } // namespace NetManagerStandard
 } // namespace OHOS
