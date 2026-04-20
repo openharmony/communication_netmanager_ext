@@ -277,6 +277,7 @@ int32_t NetworkVpnClient::SetUpVpn(sptr<VpnConfig> config,
 
 int32_t NetworkVpnClient::DestroyVpn(bool isVpnExtCall)
 {
+    isVpnSetUp_ = false;
     vpnInterface_.CloseVpnInterfaceFd();
     if (vpnEventCallback_ != nullptr) {
         UnregisterVpnEvent(vpnEventCallback_);
@@ -311,6 +312,7 @@ int32_t NetworkVpnClient::DestroyVpn(const std::string &vpnId)
         NETMGR_EXT_LOG_E("DestroyVpn vpnId is empty");
         return NETMANAGER_ERR_PARAMETER_INVALID;
     }
+    isVpnSetUp_ = false;
     vpnInterface_.CloseVpnInterfaceFd();
     if (vpnEventCallback_ != nullptr) {
         UnregisterVpnEvent(vpnEventCallback_);
@@ -550,6 +552,7 @@ int32_t NetworkVpnClient::RegisterVpnEventCbInner(bool isMultivpn)
         if (vpnEventCallback_ == nullptr) {
             vpnEventCallback_ = sptr<VpnSetUpEventCallback>::MakeSptr();
         }
+        isVpnSetUp_ = true;
         RegisterVpnEvent(vpnEventCallback_);
     }
     return NETMANAGER_EXT_SUCCESS;
@@ -652,7 +655,7 @@ void NetworkVpnClient::OnRemoteDied(const wptr<IRemoteObject> &remote)
         networkVpnService_ = nullptr;
     }
 
-    if (vpnEventCallback_ != nullptr) {
+    if (isVpnSetUp_) {
         NETMGR_EXT_LOG_D("on remote died recover callback");
         std::thread t([this]() {
             RecoverCallback();
@@ -665,6 +668,7 @@ void NetworkVpnClient::OnRemoteDied(const wptr<IRemoteObject> &remote)
 
 void NetworkVpnClient::multiUserSetUpEvent()
 {
+    isVpnSetUp_ = false;
     vpnInterface_.CloseVpnInterfaceFd();
     if (vpnEventCallback_ != nullptr) {
         UnregisterVpnEvent(vpnEventCallback_);
