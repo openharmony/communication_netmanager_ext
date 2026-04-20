@@ -147,6 +147,7 @@ private:
     SharingIfaceType netShareType_;
     int32_t lastError_ = NETMANAGER_EXT_SUCCESS;
     std::string upstreamIfaceName_;
+    std::string tunv4UpstreamIfaceName_;
     std::shared_ptr<SubStateMachineCallback> trackerCallback_ = nullptr;
     std::shared_ptr<NetworkShareConfiguration> configuration_ = nullptr;
     int32_t curState_ = SUBSTATE_INIT;
