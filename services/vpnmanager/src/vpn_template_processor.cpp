@@ -162,6 +162,14 @@ void VpnTemplateProcessor::CreateXl2tpdConf(sptr<L2tpVpnConfig> &config, int32_t
     outConf.append(oss.str());
 }
 
+std::string VpnTemplateProcessor::FormatConfigString(const std::string &value)
+{
+    if (value.find('#') != std::string::npos) {
+        return "\"" + value + "\"";
+    }
+    return value;
+}
+
 void VpnTemplateProcessor::GetSecret(sptr<IpsecVpnConfig> &ipsecConfig, int32_t ifNameId, std::string &outSecret)
 {
     if (ipsecConfig == nullptr) {

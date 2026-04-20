@@ -40,6 +40,7 @@ private:
     void CreateConnectAndSecret(sptr<IpsecVpnConfig> &ipsecConfig, sptr<L2tpVpnConfig> &l2tpConfig,
         int32_t ifNameId, std::string &outConnect, std::string &outSecret);
     void CreateXl2tpdConf(sptr<L2tpVpnConfig> &config, int32_t ifNameId, std::string &outConf);
+    std::string FormatConfigString(const std::string &value);
 };
 } // namespace NetManagerStandard
 } // namespace OHOS
