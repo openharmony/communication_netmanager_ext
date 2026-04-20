@@ -301,5 +301,21 @@ HWTEST_F(VpnTemplateProcessorTest, GetConnect001, TestSize.Level1)
     processor.GetConnect(ipsecConfig, 1, conf);
 }
 
+HWTEST_F(VpnTemplateProcessorTest, FormatConfigString001, TestSize.Level1)
+{
+    VpnTemplateProcessor processor;
+    std::string testValue = "password#123";
+    std::string result = processor.FormatConfigString(testValue);
+    EXPECT_EQ(result, "\"password#123\"");
+}
+
+HWTEST_F(VpnTemplateProcessorTest, FormatConfigString002, TestSize.Level1)
+{
+    VpnTemplateProcessor processor;
+    std::string testValue = "normalpassword";
+    std::string result = processor.FormatConfigString(testValue);
+    EXPECT_EQ(result, "normalpassword");
+}
+
 } // namespace NetManagerStandard
 } // namespace OHOS
