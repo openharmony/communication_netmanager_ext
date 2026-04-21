@@ -17,6 +17,7 @@
 #include "hwnetworkslicemanager.h"
 #include "networkslicemanager.h"
 #include <parameters.h>
+#include <charconv>
 namespace OHOS {
 namespace NetManagerStandard {
 static std::string DEFAULT_NETSLICE_CONFIG_DIR = "/system/profile/";
@@ -239,7 +240,8 @@ void UrspConfig::ParseTrafficDescriptor(xmlNodePtr node, TrafficDescriptor &traf
         attrValue = std::string(reinterpret_cast<char *>(attrvalue));
         xmlFree(attrvalue);
     }
-    int trafficDescriptorType = std::stoi(attrValue);
+    int trafficDescriptorType = 0;
+    std::from_chars(attrValue.data(), attrValue.data() + attrValue.size(), trafficDescriptorType);
     xmlChar *AttrtrafficDescriptorvalue = nullptr;
     switch (trafficDescriptorType) {
         case TRAFFIC_DESCRIPTOR_COMPONENT_MATCH_ALL:
@@ -402,6 +404,9 @@ bool UrspConfig::ParseOsAppId(xmlNodePtr node, TrafficDescriptor& trafficDescrip
     xmlFree(trafficDescriptorvalue);
     std::vector<std::string> values;
     values = Split(trafficDescriptorValue, COMMA_SEPARATOR);
+    if (values.size() < SECONDBYTE) {
+        return false;
+    }
     OsAppId osAppId;
     osAppId.setOsId(values[0]);
     osAppId.setAppId(values[1]);
@@ -417,6 +422,9 @@ bool UrspConfig::ParseIpv4Addr(xmlNodePtr node, TrafficDescriptor& trafficDescri
     xmlFree(trafficDescriptorvalue);
     std::vector<std::string> values;
     values = Split(trafficDescriptorValue, COMMA_SEPARATOR);
+    if (values.size() < SECONDBYTE) {
+        return false;
+    }
     uint32_t ipv4Address = 0;
     uint32_t ipv4Mask = 0;
     Ipv4Addr ipv4Addr;
@@ -442,6 +450,9 @@ bool UrspConfig::ParseIpv6Addr(xmlNodePtr node, TrafficDescriptor& trafficDescri
     xmlFree(trafficDescriptorvalue);
     std::vector<std::string> values;
     values = Split(trafficDescriptorValue, COMMA_SEPARATOR);
+    if (values.size() < SECONDBYTE) {
+        return false;
+    }
     struct in6_addr ipv6;
     int prefixLen = 0;
     Ipv6Addr ipv6Addr;
@@ -464,6 +475,9 @@ bool UrspConfig::ParseRemotePortRange(xmlNodePtr node, TrafficDescriptor& traffi
     xmlFree(trafficDescriptorvalue);
     std::vector<std::string> values;
     values = Split(trafficDescriptorValue, COMMA_SEPARATOR);
+    if (values.size() < SECONDBYTE) {
+        return false;
+    }
     RemotePortRange portRang;
     portRang.setPortRangeLowLimit(std::stoi(values[0]));
     portRang.setPortRangeHighLimit(std::stoi(values[1]));

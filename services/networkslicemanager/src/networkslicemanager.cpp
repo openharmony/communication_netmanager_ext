@@ -414,7 +414,8 @@ void NetworkSliceManager::BindProcessToNetworkByFullPara(std::shared_ptr<std::ma
     const auto &requestMsg = reinterpret_cast<KernelBindMsg *>(requestbuffer.get());
     requestMsg->type = type;
     requestMsg->len = len;
-    if (memcpy_s(reinterpret_cast<char *>(requestMsg->buf), len, msgData.data(), len) != EOK) {
+    size_t dataLen = msgData.size();
+    if (memcpy_s(reinterpret_cast<char *>(requestMsg->buf), dataLen, msgData.data(), dataLen) != EOK) {
         NETMGR_EXT_LOG_E("BindProcessToNetworkByFullPara memcpy_s error");
     }
     int ret = DelayedSingleton<NetworkSliceKernelProxy>::GetInstance()->SendDataToKernel(
@@ -714,7 +715,8 @@ void NetworkSliceManager::FillDeletePara(short len, int type, std::vector<int> p
     const auto &requestMsg = reinterpret_cast<KernelBindMsg *>(requestbuffer.get());
     requestMsg->type = KERNEL_DEL_UID_BIND_MSG;
     requestMsg->len = len;
-    if (memcpy_s(reinterpret_cast<char *>(requestMsg->buf), len, buffer.data(), len) != EOK) {
+    size_t dataLen = buffer.size();
+    if (memcpy_s(reinterpret_cast<char *>(requestMsg->buf), dataLen, buffer.data(), dataLen) != EOK) {
         NETMGR_EXT_LOG_E("DeleteNetworkBindByFullPara memcpy_s error");
     }
     int ret = DelayedSingleton<NetworkSliceKernelProxy>::GetInstance()->SendDataToKernel(

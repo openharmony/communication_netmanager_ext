@@ -1854,6 +1854,45 @@ HWTEST_F(UrspconfigTest, ParseTrafficDescriptor002, testing::ext::TestSize.Level
     EXPECT_EQ(trafficDescriptor.ipv4Addrs[0].getIpv4Mask(), 16843009);
 }
 
+HWTEST_F(UrspconfigTest, ParseTrafficDescriptorValueSizeFail, testing::ext::TestSize.Level1)
+{
+    TrafficDescriptor trafficDescriptor;
+    xmlNodePtr trafficDescriptorNode = xmlNewNode(nullptr, reinterpret_cast<const xmlChar *>("trafficDescriptor"));
+    xmlSetProp(trafficDescriptorNode, reinterpret_cast<const xmlChar *>(ATTR_TRAFFICDESCRIPTORTYPE.c_str()),
+        reinterpret_cast<const xmlChar *>(std::to_string(TRAFFIC_DESCRIPTOR_COMPONENT_IPV4_ADDR).c_str()));
+    xmlSetProp(trafficDescriptorNode, reinterpret_cast<const xmlChar *>(ATTR_TRAFFICDESCRIPTORVALUE.c_str()),
+        reinterpret_cast<const xmlChar *>("1.1.1.1"));
+    UrspConfig::GetInstance().ParseTrafficDescriptor(trafficDescriptorNode, trafficDescriptor);
+    EXPECT_TRUE(trafficDescriptor.ipv4Addrs.empty());
+
+    TrafficDescriptor trafficDescriptor1;
+    xmlNodePtr trafficDescriptorNode1 = xmlNewNode(nullptr, reinterpret_cast<const xmlChar *>("trafficDescriptor"));
+    xmlSetProp(trafficDescriptorNode1, reinterpret_cast<const xmlChar *>(ATTR_TRAFFICDESCRIPTORTYPE.c_str()),
+        reinterpret_cast<const xmlChar *>(std::to_string(TRAFFIC_DESCRIPTOR_COMPONENT_OS_ID_OS_APP_ID).c_str()));
+    xmlSetProp(trafficDescriptorNode1, reinterpret_cast<const xmlChar *>(ATTR_TRAFFICDESCRIPTORVALUE.c_str()),
+        reinterpret_cast<const xmlChar *>("1"));
+    UrspConfig::GetInstance().ParseTrafficDescriptor(trafficDescriptorNode1, trafficDescriptor1);
+    EXPECT_TRUE(trafficDescriptor.osAppIds.empty());
+
+    TrafficDescriptor trafficDescriptor2;
+    xmlNodePtr trafficDescriptorNode2 = xmlNewNode(nullptr, reinterpret_cast<const xmlChar *>("trafficDescriptor"));
+    xmlSetProp(trafficDescriptorNode2, reinterpret_cast<const xmlChar *>(ATTR_TRAFFICDESCRIPTORTYPE.c_str()),
+        reinterpret_cast<const xmlChar *>(std::to_string(TRAFFIC_DESCRIPTOR_COMPONENT_IPV6_ADDR).c_str()));
+    xmlSetProp(trafficDescriptorNode2, reinterpret_cast<const xmlChar *>(ATTR_TRAFFICDESCRIPTORVALUE.c_str()),
+        reinterpret_cast<const xmlChar *>("2001:0db8:85a3::8a2e:0370:7334"));
+    UrspConfig::GetInstance().ParseTrafficDescriptor(trafficDescriptorNode2, trafficDescriptor2);
+    EXPECT_TRUE(trafficDescriptor.ipv6Addrs.empty());
+
+    TrafficDescriptor trafficDescriptor3;
+    xmlNodePtr trafficDescriptorNode3 = xmlNewNode(nullptr, reinterpret_cast<const xmlChar *>("trafficDescriptor"));
+    xmlSetProp(trafficDescriptorNode3, reinterpret_cast<const xmlChar *>(ATTR_TRAFFICDESCRIPTORTYPE.c_str()),
+        reinterpret_cast<const xmlChar *>(std::to_string(TRAFFIC_DESCRIPTOR_COMPONENT_REMOTE_PORT_RANGE).c_str()));
+    xmlSetProp(trafficDescriptorNode3, reinterpret_cast<const xmlChar *>(ATTR_TRAFFICDESCRIPTORVALUE.c_str()),
+        reinterpret_cast<const xmlChar *>("1"));
+    UrspConfig::GetInstance().ParseTrafficDescriptor(trafficDescriptorNode3, trafficDescriptor3);
+    EXPECT_TRUE(trafficDescriptor.remotePortRanges.empty());
+}
+
 HWTEST_F(UrspconfigTest, ParseTrafficDescriptor003, testing::ext::TestSize.Level1)
 {
     TrafficDescriptor trafficDescriptor;
@@ -1969,4 +2008,4 @@ HWTEST_F(UrspconfigTest, FillTrafficDescriptorWhiteList001, testing::ext::TestSi
     EXPECT_EQ(whiteList->cct, "1,2");
 }
 } // NetManagerStandard
-} // OHOS
+} // OHOS
