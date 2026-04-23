@@ -2501,6 +2501,9 @@ int32_t NetworkVpnService::RequestVpnPermission(int32_t uid, const std::string& 
     }
     // LCOV_EXCL_STOP
     NETMGR_EXT_LOG_I("VPN permission not authorized, show VPN dialog for bundleName: %{public}s", bundleName.c_str());
+    bool isPermissionCheckDefaultOpen =
+        (system::GetParameter("persist.vpn.isPermissionCheckDefaultOpen", "true") == "true");
+    isAuthorized = !isPermissionCheckDefaultOpen;
     std::shared_lock<std::shared_mutex> lock(allowConnectVpnBundleNameMutex_);
     if (allowVpnStartWithoutCheckPermissions_.find(bundleName) == allowVpnStartWithoutCheckPermissions_.end()) {
         return NETMANAGER_EXT_SUCCESS;
