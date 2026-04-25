@@ -91,7 +91,6 @@ export default struct ConfirmDialog {
           .onClick(() => {
             let bundleName = globalThis.bundleName;
             let abilityName = globalThis.abilityName;
-            let parameters = globalThis.parameters;
             if (bundleName == null || abilityName == null) {
               this.destruction();
             } else {
@@ -100,10 +99,11 @@ export default struct ConfirmDialog {
                 deviceId: '',
                 bundleName: bundleName,
                 abilityName: abilityName,
-                parameters: parameters,
+                parameters: {
+                  callingUid: globalThis.vpnCallingUid,
+                  callingPid: globalThis.vpnCallingPid,
+                },
               };
-              want.parameters.callingUid = globalThis.vpnCallingUid;
-              want.parameters.callingPid = globalThis.vpnCallingPid;
               vpnext.startVpnExtensionAbility(want);
               this.destruction();
             }
