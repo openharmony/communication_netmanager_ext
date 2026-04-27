@@ -106,10 +106,11 @@ public:
         (const sptr<NetLinkInfo> &netLinkInfo, const std::set<int32_t> &uids), (override));
     MOCK_METHOD(int32_t, DisableVnicNetwork, (), (override));
     MOCK_METHOD(int32_t, EnableDistributedClientNet,
-        (const std::string &virnicAddr, const std::string &iif), (override));
+                (const std::string &virnicAddr, const std::string &virnicName, const std::string &iif), (override));
     MOCK_METHOD(int32_t, EnableDistributedServerNet, (const std::string &iif, const std::string &devIface,
                                                     const std::string &dstAddr, const std::string &gw), (override));
-    MOCK_METHOD(int32_t, DisableDistributedNet, (bool isServer), (override));
+    MOCK_METHOD(int32_t, DisableDistributedNet,
+        (bool isServer, const std::string &virnicName, const std::string &dstAddr), (override));
     MOCK_METHOD(int32_t, CloseSocketsUid, (int32_t netId, uint32_t uid), (override));
     MOCK_METHOD(int32_t, SetPacUrl, (const std::string &pacUrl), (override));
     MOCK_METHOD(int32_t, GetPacUrl, (std::string &pacUrl), (override));
