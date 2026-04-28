@@ -277,6 +277,14 @@ void NetworkShareMainStateMachine::ChooseUpstreamNetwork()
     if (networkMonitor_ != nullptr && networkMonitor_->GetCurrentGoodUpstream(netInfoPtr)) {
         upstreamIfaceName_ = netInfoPtr->netLinkPro_->ifaceName_;
         std::string tunv4UpstreamIfaceName = "tunv4-" + upstreamIfaceName_;
+        int32_t result = NetsysController::GetInstance().EnableNat(FAKE_DOWNSTREAM_IFACENAME, upstreamIfaceName_);
+        if (result != NETSYS_SUCCESS) {
+            NetworkShareHisysEvent::GetInstance().SendFaultEvent(
+                NetworkShareEventOperator::OPERATION_CONFIG_FORWARD, NetworkShareEventErrorType::ERROR_CONFIG_FORWARD,
+                ERROR_MSG_ENABLE_FORWARD, NetworkShareEventType::SETUP_EVENT);
+            NETMGR_EXT_LOG_E("Main StateMachine enable NAT newIface[%{public}s] error[%{public}d].",
+                             upstreamIfaceName_.c_str(), result);
+        }
         uint32_t tunv4IfIndex = NetworkShareTracker::GetInstance().GetInterfaceIndexByName(tunv4UpstreamIfaceName);
         if (tunv4IfIndex != 0) {
             int32_t result = NetsysController::GetInstance().EnableNat(FAKE_DOWNSTREAM_IFACENAME,
@@ -285,14 +293,6 @@ void NetworkShareMainStateMachine::ChooseUpstreamNetwork()
                 NETMGR_EXT_LOG_E("Main StateMachine enable NAT tunv4 newIface[%{public}s] error[%{public}d].",
                                  tunv4UpstreamIfaceName.c_str(), result);
             }
-        }
-        int32_t result = NetsysController::GetInstance().EnableNat(FAKE_DOWNSTREAM_IFACENAME, upstreamIfaceName_);
-        if (result != NETSYS_SUCCESS) {
-            NetworkShareHisysEvent::GetInstance().SendFaultEvent(
-                NetworkShareEventOperator::OPERATION_CONFIG_FORWARD, NetworkShareEventErrorType::ERROR_CONFIG_FORWARD,
-                ERROR_MSG_ENABLE_FORWARD, NetworkShareEventType::SETUP_EVENT);
-            NETMGR_EXT_LOG_E("Main StateMachine enable NAT newIface[%{public}s] error[%{public}d].",
-                             upstreamIfaceName_.c_str(), result);
         }
         NetworkShareTracker::GetInstance().SetUpstreamNetHandle(netInfoPtr);
     }
