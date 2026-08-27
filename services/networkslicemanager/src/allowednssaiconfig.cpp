@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 #include "allowednssaiconfig.h"
+#include "parse_hex_int.h"
 #include "networksliceutil.h"
 #include "state_utils.h"
 
@@ -24,7 +25,6 @@ constexpr int SNSSAI_LEN_2_SST_MAPPED_SST = 2;
 constexpr int SNSSAI_LEN_4_SST_SD = 4;
 constexpr int SNSSAI_LEN_5_SST_SD_MAPPED_SST = 5;
 constexpr int SNSSAI_LEN_8_SST_SD_MAPPED_SST_MAPPED_SD = 8;
-constexpr int RADIX = 16;
 
 std::shared_ptr<AllowedNssaiConfig> sAllowedNssaiConfig_ =
     std::make_shared<AllowedNssaiConfig>(AllowedNssaiConfig::GetInstance());
@@ -55,13 +55,23 @@ bool AllowedNssaiConfig::ParseSnssai(Snssai& snssai)
     for (size_t i = 0; i < snssaiValues.size(); ++i) {
         NETMGR_EXT_LOG_I("snssaiValues[%{public}s]", snssaiValues[i].c_str());
     }
+    int sst = 0;
+    int sd = 0;
     if (snssaiValues.size() == 1) {
-        snssai.setSst(ConvertInt2UnsignedByte((std::stoi(snssaiValues[0], nullptr, RADIX))));
+        if (!ParseHexInt(snssaiValues[0], sst)) {
+            NETMGR_EXT_LOG_E("invalid hex sst");
+            return false;
+        }
+        snssai.setSst(ConvertInt2UnsignedByte(sst));
         NETMGR_EXT_LOG_I("size = 1, Sst = %{public}d", snssai.getSst());
         snssai.setSnssaiLen(1);
     } else if (snssaiValues.size() == NetworkSliceCommConfig::LEN_SHORT) {
-        snssai.setSst(ConvertInt2UnsignedByte((std::stoi(snssaiValues[0], nullptr, RADIX))));
-        snssai.setSd(std::stoi(snssaiValues[1], nullptr, RADIX));
+        if (!ParseHexInt(snssaiValues[0], sst) || !ParseHexInt(snssaiValues[1], sd)) {
+            NETMGR_EXT_LOG_E("invalid hex sst/sd");
+            return false;
+        }
+        snssai.setSst(ConvertInt2UnsignedByte(sst));
+        snssai.setSd(sd);
         NETMGR_EXT_LOG_I("size = 2, Sst = %{public}d, Sd = %{public}d", snssai.getSst(), snssai.getSd());
         snssai.setSnssaiLen(NetworkSliceCommConfig::LEN_INT);
     } else {
@@ -72,12 +82,22 @@ bool AllowedNssaiConfig::ParseSnssai(Snssai& snssai)
 
     if (values.size() == NetworkSliceCommConfig::LEN_SHORT) {
         snssaiValues = Split(values[1], SST_AND_SD_SEPARATOR);
+        int mappedSst = 0;
+        int mappedSd = 0;
         if (snssaiValues.size() == 1) {
-            snssai.setMappedSst(ConvertInt2UnsignedByte((std::stoi(snssaiValues[0], nullptr, RADIX))));
+            if (!ParseHexInt(snssaiValues[0], mappedSst)) {
+                NETMGR_EXT_LOG_E("invalid hex mapped sst");
+                return false;
+            }
+            snssai.setMappedSst(ConvertInt2UnsignedByte(mappedSst));
             snssai.setSnssaiLen(snssai.getSnssaiLen() + 1);
         } else if (snssaiValues.size() == NetworkSliceCommConfig::LEN_SHORT) {
-            snssai.setMappedSst(ConvertInt2UnsignedByte((std::stoi(snssaiValues[0], nullptr, RADIX))));
-            snssai.setMappedSd(std::stoi(snssaiValues[1], nullptr, RADIX));
+            if (!ParseHexInt(snssaiValues[0], mappedSst) || !ParseHexInt(snssaiValues[1], mappedSd)) {
+                NETMGR_EXT_LOG_E("invalid hex mapped sst/sd");
+                return false;
+            }
+            snssai.setMappedSst(ConvertInt2UnsignedByte(mappedSst));
+            snssai.setMappedSd(mappedSd);
             snssai.setSnssaiLen(snssai.getSnssaiLen() + NetworkSliceCommConfig::LEN_INT);
         } else {
             NETMGR_EXT_LOG_E("values[1].snssaiValues.length invalid, snssaiValues.length = [%{public}d]",
