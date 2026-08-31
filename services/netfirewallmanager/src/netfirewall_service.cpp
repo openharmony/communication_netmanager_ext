@@ -15,6 +15,7 @@
 
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <charconv>
 
 #include "netfirewall_service.h"
 #include "ipc_skeleton.h"
@@ -648,8 +649,14 @@ int32_t NetFirewallService::DestroyPacketController(const std::string& packetCon
         return NETMANAGER_EXT_ERR_INVALID_PARAMETER;
     }
     std::string queueNumStr = packetControllerId.substr(pos1 + 1);
-    uint32_t queueNum = std::stoi(queueNumStr);
-    return NetTrafficFilterNFQueueCore::GetInstance().DestroyQueue(queueNum);
+    int32_t queueNum = 0;
+    const char *begin = queueNumStr.data();
+    const char *end = begin + queueNumStr.size();
+    auto parsed = std::from_chars(begin, end, queueNum);
+    if (parsed.ec != std::errc{} || parsed.ptr != end || queueNum < 0) {
+        return NETMANAGER_EXT_ERR_INVALID_PARAMETER;
+    }
+    return NetTrafficFilterNFQueueCore::GetInstance().DestroyQueue(static_cast<uint32_t>(queueNum));
 }
 
 std::string NetFirewallService::GetBundleName()
